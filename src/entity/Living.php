@@ -195,7 +195,7 @@ abstract class Living extends Entity{
 				$duration = $e->getInt(self::TAG_EFFECT_DURATION);
 				$this->effectManager->add(new EffectInstance(
 					$effect,
-					$duration === -1 ? Limits::INT32_MAX : $duration,
+					$e->getInt(self::TAG_EFFECT_DURATION),
 					Binary::unsignByte($e->getByte(self::TAG_EFFECT_AMPLIFIER)),
 					$e->getByte(self::TAG_EFFECT_SHOW_PARTICLES, 1) !== 0,
 					$e->getByte(self::TAG_EFFECT_AMBIENT, 0) !== 0,
@@ -326,7 +326,7 @@ abstract class Living extends Entity{
 				$effects[] = CompoundTag::create()
 					->setByte(self::TAG_EFFECT_ID, EffectIdMap::getInstance()->toId($effect->getType()))
 					->setByte(self::TAG_EFFECT_AMPLIFIER, Binary::signByte($effect->getAmplifier()))
-					->setInt(self::TAG_EFFECT_DURATION, $effect->isInfinite() ? -1 : $effect->getDuration())
+					->setInt(self::TAG_EFFECT_DURATION, $effect->getDuration())
 					->setByte(self::TAG_EFFECT_AMBIENT, $effect->isAmbient() ? 1 : 0)
 					->setByte(self::TAG_EFFECT_SHOW_PARTICLES, $effect->isVisible() ? 1 : 0);
 			}
@@ -455,9 +455,11 @@ abstract class Living extends Entity{
 			$source->setModifier(-$this->lastDamageCause->getBaseDamage(), EntityDamageEvent::MODIFIER_PREVIOUS_DAMAGE_COOLDOWN);
 		}
 		if($source->canBeReducedByArmor()){
-			//MCPE uses the same system as PC did pre-1.9
-			//custom items can push defense points past 20, and past 25 the reduction flips the damage negative
-			$source->setModifier(-$source->getFinalDamage() * min($this->getArmorPoints(), 20) * 0.04, EntityDamageEvent::MODIFIER_ARMOR);
+			$armorPoint = $this->getArmorPoints();
+			if($armorPoint >= 1){
+				$modifier = -$source->getFinalDamage() * $armorPoint / ($armorPoint + 7);
+				$source->setModifier($modifier, EntityDamageEvent::MODIFIER_ARMOR);
+			}
 		}
 
 		$cause = $source->getCause();
@@ -569,8 +571,6 @@ abstract class Living extends Entity{
 			$source->getCause() === EntityDamageEvent::CAUSE_BLOCK_EXPLOSION ||
 			$source->getCause() === EntityDamageEvent::CAUSE_ENTITY_EXPLOSION)
 		){
-			//TODO: knockback should not just apply for entity damage sources
-			//this doesn't matter for TNT right now because the PrimedTNT entity is considered the source, not the block.
 			$base = $source->getKnockBack();
 			$source->setKnockBack($base - min($base, $base * $this->getHighestArmorEnchantmentLevel(VanillaEnchantments::BLAST_PROTECTION()) * 0.15));
 		}

@@ -55,7 +55,7 @@ abstract class Crops extends Flowable implements Ageable{
 				$tempAge = self::MAX_AGE;
 			}
 			$block->age = $tempAge;
-			if(BlockEventHelper::grow($this, $block, $player)){
+			if(BlockEventHelper::grow($this, $block, $player, false)){
 				$item->pop();
 			}
 

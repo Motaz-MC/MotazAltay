@@ -30,43 +30,22 @@ use pocketmine\block\Farmland;
 use function mt_rand;
 
 final class CropGrowthHelper{
-
-	private const ON_HYDRATED_FARMLAND_BONUS = 3;
-	private const ON_DRY_FARMLAND_BONUS = 1;
-	private const ADJACENT_HYDRATED_FARMLAND_BONUS = 3 / 4;
-	private const ADJACENT_DRY_FARMLAND_BONUS = 1 / 4;
-
 	private const IMPROPER_ARRANGEMENT_DIVISOR = 2;
-
-	private const MIN_LIGHT_LEVEL = 9;
 
 	private function __construct(){
 		//NOOP
 	}
 
-	/**
-	 * Returns the speed at which this crop will grow, depending on its surroundings.
-	 * The default is once every 26 random ticks.
-	 *
-	 * Things which influence this include nearby farmland (bonus for hydrated farmland) and the position of other
-	 * nearby crops of the same type (nearby crops of the same type will negatively influence growth speed unless
-	 * planted in rows and properly spaced apart).
-	 */
 	public static function calculateMultiplier(Block $block) : float{
 		$result = 1;
 
 		$position = $block->getPosition();
-
 		$world = $position->getWorld();
 		$baseX = $position->getFloorX();
 		$baseY = $position->getFloorY();
 		$baseZ = $position->getFloorZ();
 
-		$farmland = $world->getBlockAt($baseX, $baseY - 1, $baseZ);
-
-		if($farmland instanceof Farmland){
-			$result += $farmland->getWetness() > 0 ? self::ON_HYDRATED_FARMLAND_BONUS : self::ON_DRY_FARMLAND_BONUS;
-		}
+		$result += 3;
 
 		$xRow = false;
 		$zRow = false;
@@ -83,7 +62,7 @@ final class CropGrowthHelper{
 					continue;
 				}
 
-				$result += $nextFarmland->getWetness() > 0 ? self::ADJACENT_HYDRATED_FARMLAND_BONUS : self::ADJACENT_DRY_FARMLAND_BONUS;
+				$result += 0.75;
 
 				if(!$improperArrangement){
 					$nextCrop = $world->getBlockAt($baseX + $x, $baseY, $baseZ + $z);
@@ -98,7 +77,6 @@ final class CropGrowthHelper{
 			}
 		}
 
-		//crops can be arranged in rows, but the rows must not cross and must be spaced apart by at least one block
 		if($improperArrangement){
 			$result /= self::IMPROPER_ARRANGEMENT_DIVISOR;
 		}
@@ -106,17 +84,8 @@ final class CropGrowthHelper{
 		return $result;
 	}
 
-	public static function hasEnoughLight(Block $block, int $minLevel = self::MIN_LIGHT_LEVEL) : bool{
-		$position = $block->getPosition();
-		$world = $position->getWorld();
-
-		//crop growth is not affected by time of day since 1.11 or so
-		return $world->getPotentialLightAt($position->x, $position->y, $position->z) >= $minLevel;
-	}
 
 	public static function canGrow(Block $block) : bool{
-		//while it may be tempting to use mt_rand(0, 25) < multiplier, this would make crops grow a bit faster than
-		//vanilla in most cases due to the remainder of 25 / multiplier not being discarded
-		return mt_rand(0, (int) (25 / self::calculateMultiplier($block))) === 0 && self::hasEnoughLight($block);
+		return mt_rand(0, (int) (25 / self::calculateMultiplier($block))) === 0;
 	}
 }

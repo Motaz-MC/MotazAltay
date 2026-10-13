@@ -103,7 +103,6 @@ use pocketmine\world\generator\executor\GeneratorExecutor;
 use pocketmine\world\generator\executor\GeneratorExecutorSetupParameters;
 use pocketmine\world\generator\executor\SyncGeneratorExecutor;
 use pocketmine\world\generator\GeneratorManager;
-use pocketmine\world\generator\PopulationTask;
 use pocketmine\world\light\BlockLightUpdate;
 use pocketmine\world\light\LightPopulationTask;
 use pocketmine\world\light\SkyLightUpdate;
@@ -153,7 +152,6 @@ use const PHP_INT_MIN;
  * @phpstan-type ChunkBlockPosHash int
  */
 class World implements ChunkManager{
-
 	private static int $worldIdCounter = 1;
 
 	public const Y_MAX = 320;
@@ -1301,30 +1299,26 @@ class World implements ChunkManager{
 	 */
 	private function isChunkTickable(int $chunkX, int $chunkZ, array &$cache) : bool{
 		for($cx = -1; $cx <= 1; ++$cx){
+			$adjX = $chunkX + $cx;
+
 			for($cz = -1; $cz <= 1; ++$cz){
-				$chunkHash = World::chunkHash($chunkX + $cx, $chunkZ + $cz);
+				$adjZ = $chunkZ + $cz;
+				$chunkHash = World::chunkHash($adjX, $adjZ);
+
 				if(isset($cache[$chunkHash])){
 					if(!$cache[$chunkHash]){
 						return false;
 					}
 					continue;
 				}
-				if($this->isChunkLocked($chunkX + $cx, $chunkZ + $cz)){
-					$cache[$chunkHash] = false;
-					return false;
+
+				if($this->isChunkLocked($adjX, $adjZ)){
+					return $cache[$chunkHash] = false;
 				}
-				$adjacentChunk = $this->getChunk($chunkX + $cx, $chunkZ + $cz);
-				if($adjacentChunk === null || !$adjacentChunk->isPopulated()){
-					$cache[$chunkHash] = false;
-					return false;
-				}
-				$lightPopulatedState = $adjacentChunk->isLightPopulated();
-				if($lightPopulatedState !== true){
-					if($lightPopulatedState === false){
-						$this->orderLightPopulation($chunkX + $cx, $chunkZ + $cz);
-					}
-					$cache[$chunkHash] = false;
-					return false;
+
+				$chunk = $this->getChunk($adjX, $adjZ);
+				if($chunk === null || !$chunk->isPopulated()){
+					return $cache[$chunkHash] = false;
 				}
 
 				$cache[$chunkHash] = true;
@@ -1333,7 +1327,6 @@ class World implements ChunkManager{
 
 		return true;
 	}
-
 	/**
 	 * Marks the 3x3 square of chunks centered on the specified chunk for chunk ticking eligibility recheck.
 	 *
@@ -1783,10 +1776,7 @@ class World implements ChunkManager{
 	 * time of day.
 	 */
 	public function getFullLight(Vector3 $pos) : int{
-		$floorX = $pos->getFloorX();
-		$floorY = $pos->getFloorY();
-		$floorZ = $pos->getFloorZ();
-		return $this->getFullLightAt($floorX, $floorY, $floorZ);
+		return 15;
 	}
 
 	/**
@@ -1794,12 +1784,7 @@ class World implements ChunkManager{
 	 * time of day.
 	 */
 	public function getFullLightAt(int $x, int $y, int $z) : int{
-		$skyLight = $this->getRealBlockSkyLightAt($x, $y, $z);
-		if($skyLight < 15){
-			return max($skyLight, $this->getBlockLightAt($x, $y, $z));
-		}else{
-			return $skyLight;
-		}
+		return 15;
 	}
 
 	/**
@@ -1807,7 +1792,7 @@ class World implements ChunkManager{
 	 * current weather and time of day.
 	 */
 	public function getHighestAdjacentFullLightAt(int $x, int $y, int $z) : int{
-		return $this->getHighestAdjacentLight($x, $y, $z, $this->getFullLightAt(...));
+		return 15;
 	}
 
 	/**
@@ -1869,34 +1854,7 @@ class World implements ChunkManager{
 	 * @return int 0-15
 	 */
 	public function getBlockLightAt(int $x, int $y, int $z) : int{
-		if(!$this->isInWorld($x, $y, $z)){
-			return 0;
-		}
-		if(($chunk = $this->getChunk($x >> Chunk::COORD_BIT_SIZE, $z >> Chunk::COORD_BIT_SIZE)) !== null && $chunk->isLightPopulated() === true){
-			return $chunk->getSubChunk($y >> Chunk::COORD_BIT_SIZE)->getBlockLightArray()->get($x & SubChunk::COORD_MASK, $y & SubChunk::COORD_MASK, $z & SubChunk::COORD_MASK);
-		}
-		return 0; //TODO: this should probably throw instead (light not calculated yet)
-	}
-
-	public function updateAllLight(int $x, int $y, int $z) : void{
-		if(($chunk = $this->getChunk($x >> Chunk::COORD_BIT_SIZE, $z >> Chunk::COORD_BIT_SIZE)) === null || $chunk->isLightPopulated() !== true){
-			return;
-		}
-
-		$blockFactory = $this->blockStateRegistry;
-		$this->timings->doBlockSkyLightUpdates->startTiming();
-		if($this->skyLightUpdate === null){
-			$this->skyLightUpdate = new SkyLightUpdate(new SubChunkExplorer($this), $blockFactory->lightFilter, $blockFactory->blocksDirectSkyLight);
-		}
-		$this->skyLightUpdate->recalculateNode($x, $y, $z);
-		$this->timings->doBlockSkyLightUpdates->stopTiming();
-
-		$this->timings->doBlockLightUpdates->startTiming();
-		if($this->blockLightUpdate === null){
-			$this->blockLightUpdate = new BlockLightUpdate(new SubChunkExplorer($this), $blockFactory->lightFilter, $blockFactory->light);
-		}
-		$this->blockLightUpdate->recalculateNode($x, $y, $z);
-		$this->timings->doBlockLightUpdates->stopTiming();
+		return 15;
 	}
 
 	/**
@@ -2109,7 +2067,6 @@ class World implements ChunkManager{
 		}
 
 		if($update){
-			$this->updateAllLight($x, $y, $z);
 			$this->internalNotifyNeighbourBlockUpdate($x, $y, $z);
 		}
 

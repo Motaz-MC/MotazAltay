@@ -101,7 +101,7 @@ final class BambooSapling extends Flowable{
 		$world = $this->position->getWorld();
 		if($this->ready){
 			$this->ready = false;
-			if($world->getFullLight($this->position) < 9 || !$this->grow(null)){
+			if(!$this->grow(null)){
 				$world->setBlock($this->position, $this);
 			}
 		}elseif($world->getBlock($this->position->up())->canBeReplaced()){
