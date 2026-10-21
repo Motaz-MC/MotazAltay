@@ -105,6 +105,7 @@ use pocketmine\network\mcpe\protocol\types\PlayerAuthInputFlags;
 use pocketmine\network\mcpe\protocol\types\PlayerBlockActionWithBlockInfo;
 use pocketmine\network\PacketHandlingException;
 use pocketmine\player\Player;
+use pocketmine\Server;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\Limits;
 use pocketmine\utils\TextFormat;
@@ -1060,7 +1061,8 @@ class InGamePacketHandler extends PacketHandler{
 	}
 
 	public function handleRequestChunkRadius(RequestChunkRadiusPacket $packet) : bool{
-		$this->player->setViewDistance($packet->radius);
+		$distance = $this->player->getWorld()->getFolderName() === Server::getInstance()->getWorldManager()->getDefaultWorld()->getFolderName() ? 15 : 7;
+		$this->player->setViewDistance($distance);
 
 		return true;
 	}

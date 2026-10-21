@@ -1031,8 +1031,10 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		$world = $this->getWorld();
 		$tickingChunkRadius = $world->getChunkTickRadius();
 
+		$distance = $this->getWorld()->getFolderName() === Server::getInstance()->getWorldManager()->getDefaultWorld()->getFolderName() ? 15 : 7;
+
 		foreach($this->chunkSelector->selectChunks(
-			$this->server->getAllowedViewDistance($this->viewDistance),
+			$this->server->getAllowedViewDistance($distance),
 			$this->location->getFloorX() >> Chunk::COORD_BIT_SIZE,
 			$this->location->getFloorZ() >> Chunk::COORD_BIT_SIZE
 		) as $radius => $hash){
@@ -1056,7 +1058,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		$this->tickingChunks = $tickingChunks;
 
 		if(count($this->loadQueue) > 0 || count($unloadChunks) > 0){
-			$this->getNetworkSession()->syncViewAreaCenterPoint($this->location, $this->viewDistance);
+			$distance = $this->getWorld()->getFolderName() === Server::getInstance()->getWorldManager()->getDefaultWorld()->getFolderName() ? 15 : 7;
+
+			$this->getNetworkSession()->syncViewAreaCenterPoint($this->location, $distance);
 		}
 
 		Timings::$playerChunkOrder->stopTiming();

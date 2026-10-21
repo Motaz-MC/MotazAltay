@@ -110,7 +110,6 @@ use pocketmine\world\particle\BlockBreakParticle;
 use pocketmine\world\particle\Particle;
 use pocketmine\world\sound\BlockPlaceSound;
 use pocketmine\world\sound\Sound;
-use pocketmine\world\utils\SubChunkExplorer;
 use pocketmine\YmlServerProperties;
 use function abs;
 use function array_filter;
